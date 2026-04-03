@@ -14,7 +14,7 @@ struct MainTabView: View {
         TabView(selection: $router.selectedTab) {
             Tab("Trips", systemImage: "suitcase.fill", value: .trips) {
                 NavigationStack(path: $router.tripsPath) {
-                    TripsPlaceholderScreen()
+                    TripListScreen()
                         .navigationDestination(for: AppRoute.self) { route in
                             routeDestination(route)
                         }
