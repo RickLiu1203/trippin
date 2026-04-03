@@ -18,6 +18,26 @@ final class MockTripService: TripService {
     var createCallCount = 0
     var deleteCallCount = 0
 
+    func fetchTrip(id: UUID) async throws -> Trip {
+        if shouldFail { throw TripServiceError.notAuthenticated }
+        guard let trip = trips.first(where: { $0.id == id }) else {
+            throw TripServiceError.notAuthenticated
+        }
+        return trip
+    }
+
+    func updateTripAlbum(id: UUID, albumIdentifier: String) async throws -> Trip {
+        if shouldFail { throw TripServiceError.notAuthenticated }
+        guard let index = trips.firstIndex(where: { $0.id == id }) else {
+            throw TripServiceError.notAuthenticated
+        }
+        var trip = trips[index]
+        trip.albumIdentifier = albumIdentifier
+        trip.updatedAt = Date()
+        trips[index] = trip
+        return trip
+    }
+
     func fetchTrips() async throws -> [Trip] {
         if shouldFail { throw TripServiceError.notAuthenticated }
         return trips

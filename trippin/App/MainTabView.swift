@@ -55,7 +55,7 @@ struct MainTabView: View {
     private func routeDestination(_ route: AppRoute) -> some View {
         switch route {
         case .tripDetail(let tripId):
-            PlaceholderDetailScreen(title: "Trip Detail", id: tripId)
+            TripDetailScreen(tripId: tripId)
         case .createTrip:
             PlaceholderDetailScreen(title: "Create Trip")
         case .editTrip(let tripId):

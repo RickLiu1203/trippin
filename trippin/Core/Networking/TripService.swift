@@ -18,6 +18,8 @@ protocol TripService: Sendable {
     func createTrip(name: String) async throws -> Trip
     func updateTrip(id: UUID, name: String) async throws -> Trip
     func deleteTrip(id: UUID) async throws
+    func fetchTrip(id: UUID) async throws -> Trip
+    func updateTripAlbum(id: UUID, albumIdentifier: String) async throws -> Trip
     func fetchMembers(tripId: UUID) async throws -> [TripMember]
     func fetchPhotoCount(tripId: UUID) async throws -> Int
 }
@@ -102,6 +104,27 @@ final class SupabaseTripService: TripService {
             .execute()
     }
 
+    func fetchTrip(id: UUID) async throws -> Trip {
+        try await supabase
+            .from("trips")
+            .select()
+            .eq("id", value: id.uuidString)
+            .single()
+            .execute()
+            .value
+    }
+
+    func updateTripAlbum(id: UUID, albumIdentifier: String) async throws -> Trip {
+        try await supabase
+            .from("trips")
+            .update(UpdateAlbumParams(albumIdentifier: albumIdentifier))
+            .eq("id", value: id.uuidString)
+            .select()
+            .single()
+            .execute()
+            .value
+    }
+
     func fetchMembers(tripId: UUID) async throws -> [TripMember] {
         try await supabase
             .from("trip_members")
@@ -157,4 +180,12 @@ private struct CreateMemberParams: Encodable {
 
 private struct UpdateTripParams: Encodable {
     let name: String
+}
+
+private struct UpdateAlbumParams: Encodable {
+    let albumIdentifier: String
+
+    enum CodingKeys: String, CodingKey {
+        case albumIdentifier = "album_identifier"
+    }
 }
