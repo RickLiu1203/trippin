@@ -6,33 +6,39 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function getUserIdFromJwt(req: Request): string | null {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  try {
+    const token = authHeader.replace("Bearer ", "");
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.sub || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    const userId = getUserIdFromJwt(req);
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: missing or invalid JWT" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const { share_code, display_name, emoji, color } = await req.json();
 
@@ -63,7 +69,7 @@ Deno.serve(async (req) => {
       .from("trip_members")
       .select("id")
       .eq("trip_id", trip.id)
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (existingMember) {
@@ -114,7 +120,7 @@ Deno.serve(async (req) => {
       .from("trip_members")
       .insert({
         trip_id: trip.id,
-        user_id: user.id,
+        user_id: userId,
         display_name,
         emoji,
         color,

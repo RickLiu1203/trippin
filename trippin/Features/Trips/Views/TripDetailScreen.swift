@@ -40,7 +40,7 @@ struct TripDetailScreen: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
-                    router.navigate(to: .shareTrip(tripId: viewModel.tripId))
+                    viewModel.showShareSheet = true
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                 }
@@ -63,6 +63,11 @@ struct TripDetailScreen: View {
                 ) {
                     Task { await viewModel.loadTrip() }
                 }
+            }
+        }
+        .sheet(isPresented: $viewModel.showShareSheet) {
+            if let trip = viewModel.trip {
+                ShareTripSheet(shareCode: trip.shareCode)
             }
         }
         .sheet(isPresented: $viewModel.showLinkAlbumSheet) {

@@ -63,6 +63,16 @@ struct TripListScreen: View {
         }
         .task {
             await viewModel.loadTrips()
+            handlePendingShareCode()
+        }
+        .onAppear {
+            handlePendingShareCode()
+        }
+    }
+
+    private func handlePendingShareCode() {
+        if let shareCode = router.consumePendingShareCode() {
+            router.navigate(to: .guestJoin(shareCode: shareCode))
         }
     }
 

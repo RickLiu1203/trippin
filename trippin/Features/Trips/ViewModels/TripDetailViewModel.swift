@@ -18,6 +18,7 @@ final class TripDetailViewModel {
     var error: String?
     var showEditSheet = false
     var showLinkAlbumSheet = false
+    var showShareSheet = false
     var userId: UUID?
 
     let tripId: UUID

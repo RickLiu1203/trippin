@@ -66,8 +66,8 @@ struct MainTabView: View {
             PlaceholderDetailScreen(title: "Day \(dayIndex + 1)", id: tripId)
         case .eventDetail(let clusterId):
             PlaceholderDetailScreen(title: "Event Detail", id: clusterId)
-        case .shareTrip(let tripId):
-            PlaceholderDetailScreen(title: "Share Trip", id: tripId)
+        case .shareTrip:
+            PlaceholderDetailScreen(title: "Share Trip")
         case .clusterDetail(let clusterId):
             PlaceholderDetailScreen(title: "Cluster Detail", id: clusterId)
         case .photoDetail(let photoId):
@@ -84,8 +84,8 @@ struct MainTabView: View {
             PlaceholderDetailScreen(title: "Place Review", id: tripId)
         case .deviceClaim(let tripId):
             PlaceholderDetailScreen(title: "Device Claim", id: tripId)
-        case .guestJoin:
-            PlaceholderDetailScreen(title: "Guest Join")
+        case .guestJoin(let shareCode):
+            JoinTripScreen(shareCode: shareCode)
         }
     }
 }
