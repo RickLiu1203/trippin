@@ -17,6 +17,7 @@ enum AuthGateDestination: Equatable {
 struct AuthGate: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @Environment(PhotoPermissionService.self) private var permissionService
+    @Environment(AppRouter.self) private var router
 
     var destination: AuthGateDestination {
         Self.resolveDestination(
@@ -40,8 +41,7 @@ struct AuthGate: View {
                 PhotoPermissionScreen()
 
             case .main:
-                // Placeholder until Step 5 wires up MainTabView
-                ContentView()
+                MainTabView(router: router)
             }
         }
         .paperAnimation(value: destination)
