@@ -9,9 +9,17 @@ import SwiftUI
 
 @main
 struct trippinApp: App {
+    @State private var authViewModel = AuthViewModel()
+    @State private var permissionService = PhotoPermissionService()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AuthGate()
+                .environment(authViewModel)
+                .environment(permissionService)
+                .onAppear {
+                    authViewModel.startObservingAuthState()
+                }
         }
     }
 }
