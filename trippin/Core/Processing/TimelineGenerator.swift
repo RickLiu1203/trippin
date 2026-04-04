@@ -34,6 +34,45 @@ struct TimelineEvent: Sendable, Identifiable {
 enum TimelineGenerator {
     static let travelGapThreshold: TimeInterval = 2 * 60 * 60
 
+    static func generateFromDB(
+        clusters: [PhotoCluster],
+        clusterPhotos: [ClusterPhoto],
+        metadata: [PhotoMetadata]
+    ) -> [TimelineDay] {
+        let metadataById = Dictionary(uniqueKeysWithValues: metadata.map { ($0.id, $0) })
+        let photosByCluster = Dictionary(grouping: clusterPhotos, by: \.clusterId)
+
+        let events: [TimelineEvent] = clusters.map { cluster in
+            let photoIds = photosByCluster[cluster.id]?.map(\.photoMetadataId) ?? []
+            let categories = photoIds.compactMap { metadataById[$0]?.category }
+            let dominant = dominantCategory(categories)
+
+            var memberCounts: [UUID: Int] = [:]
+            for id in photoIds {
+                if let memberId = metadataById[id]?.memberId {
+                    memberCounts[memberId, default: 0] += 1
+                }
+            }
+
+            return TimelineEvent(
+                id: cluster.id,
+                isTravelGap: false,
+                startTime: cluster.startTime,
+                endTime: cluster.endTime,
+                photoCount: cluster.photoCount,
+                dominantCategory: dominant,
+                memberContributions: memberCounts,
+                photoMetadataIds: photoIds,
+                centroidLat: cluster.centroidLat,
+                centroidLon: cluster.centroidLon
+            )
+        }
+
+        let sorted = events.sorted { $0.startTime < $1.startTime }
+        let withGaps = insertTravelGaps(events: sorted)
+        return groupByDay(events: withGaps)
+    }
+
     static func generate(
         clusters: [ClusterResult],
         metadata: [UUID: PhotoMetadata]
@@ -77,6 +116,7 @@ enum TimelineGenerator {
 
     static func dominantCategory(_ categories: [PhotoCategory]) -> PhotoCategory {
         guard !categories.isEmpty else { return .activity }
+        if categories.contains(.food) { return .food }
         var counts: [PhotoCategory: Int] = [:]
         for cat in categories { counts[cat, default: 0] += 1 }
         return counts.max(by: { $0.value < $1.value })?.key ?? .activity

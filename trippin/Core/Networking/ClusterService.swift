@@ -12,6 +12,7 @@ import Supabase
 protocol ClusterService: Sendable {
     func replaceClusters(tripId: UUID, days: [TimelineDay]) async throws
     func fetchClusters(tripId: UUID) async throws -> [PhotoCluster]
+    func fetchClusterPhotos(tripId: UUID) async throws -> [ClusterPhoto]
 }
 
 final class SupabaseClusterService: ClusterService {
@@ -65,6 +66,18 @@ final class SupabaseClusterService: ClusterService {
             .eq("trip_id", value: tripId.uuidString)
             .order("day_index")
             .order("cluster_order")
+            .execute()
+            .value
+    }
+
+    func fetchClusterPhotos(tripId: UUID) async throws -> [ClusterPhoto] {
+        let clusters = try await fetchClusters(tripId: tripId)
+        guard !clusters.isEmpty else { return [] }
+        let clusterIds = clusters.map(\.id.uuidString)
+        return try await supabase
+            .from("cluster_photos")
+            .select()
+            .in("cluster_id", values: clusterIds)
             .execute()
             .value
     }

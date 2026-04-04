@@ -21,6 +21,11 @@ final class MockPhotoMetadataService: PhotoMetadataService {
         return existingAssetIds
     }
 
+    func fetchAll(tripId: UUID) async throws -> [PhotoMetadata] {
+        if shouldFail { throw TripServiceError.notAuthenticated }
+        return []
+    }
+
     func insertBatch(_ metadata: [InsertPhotoMetadataParams]) async throws {
         if shouldFail { throw TripServiceError.notAuthenticated }
         insertedMetadata.append(contentsOf: metadata)

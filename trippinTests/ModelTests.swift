@@ -37,9 +37,9 @@ private func roundTrip<T: Codable & Equatable>(_ value: T) throws -> T {
 
 @Suite("PhotoCategory Tests")
 struct PhotoCategoryTests {
-    @Test("has exactly 4 cases")
+    @Test("has exactly 6 cases")
     func caseCount() {
-        #expect(PhotoCategory.allCases.count == 4)
+        #expect(PhotoCategory.allCases.count == 6)
     }
 
     @Test("contains correct categories")

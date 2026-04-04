@@ -17,6 +17,11 @@ enum ProcessingState: Sendable, Equatable {
 
 struct ProcessingResult: Sendable {
     let processedCount: Int
+    let withLocation: Int
+    let withoutLocation: Int
+    let totalInAlbum: Int
+    let skippedAlreadyProcessed: Int
+    let uniqueDevicesWithoutLocation: Int
     let unclaimedDevices: [UnclaimedDevice]
 }
 
@@ -52,9 +57,10 @@ actor PhotoProcessingPipeline {
         state = .processing(completed: 0, total: 0)
 
         let assets = await albumService.fetchPhotos(albumIdentifier: albumIdentifier)
+        let totalInAlbum = assets.count
         if assets.isEmpty {
             state = .complete(newCount: 0)
-            return ProcessingResult(processedCount: 0, unclaimedDevices: [])
+            return ProcessingResult(processedCount: 0, withLocation: 0, withoutLocation: 0, totalInAlbum: 0, skippedAlreadyProcessed: 0, uniqueDevicesWithoutLocation: 0, unclaimedDevices: [])
         }
 
         let existingIds: Set<String>
@@ -62,13 +68,14 @@ actor PhotoProcessingPipeline {
             existingIds = try await metadataService.fetchExistingAssetIds(tripId: tripId)
         } catch {
             state = .error(error.localizedDescription)
-            return ProcessingResult(processedCount: 0, unclaimedDevices: [])
+            return ProcessingResult(processedCount: 0, withLocation: 0, withoutLocation: 0, totalInAlbum: totalInAlbum, skippedAlreadyProcessed: 0, uniqueDevicesWithoutLocation: 0, unclaimedDevices: [])
         }
 
+        let skippedCount = existingIds.count
         let newAssets = assets.filter { !existingIds.contains($0.localIdentifier) }
         if newAssets.isEmpty {
             state = .complete(newCount: 0)
-            return ProcessingResult(processedCount: 0, unclaimedDevices: [])
+            return ProcessingResult(processedCount: 0, withLocation: 0, withoutLocation: 0, totalInAlbum: totalInAlbum, skippedAlreadyProcessed: skippedCount, uniqueDevicesWithoutLocation: 0, unclaimedDevices: [])
         }
 
         let total = newAssets.count
@@ -80,6 +87,7 @@ actor PhotoProcessingPipeline {
         var insertParams: [InsertPhotoMetadataParams] = []
         var unclaimedDevices: [UnclaimedDevice] = []
         var seenUnclaimed: Set<String> = []
+        var devicesWithoutLocation: Set<String> = []
 
         for extracted in extractedBatch {
             let classification = classifications[extracted.localAssetId]
@@ -103,6 +111,13 @@ actor PhotoProcessingPipeline {
                 }
             }
 
+            if extracted.latitude == nil || extracted.longitude == nil {
+                let deviceKey = [extracted.cameraMake ?? "", extracted.cameraModel ?? ""].joined(separator: "|")
+                if !deviceKey.isEmpty && deviceKey != "|" {
+                    devicesWithoutLocation.insert(deviceKey)
+                }
+            }
+
             insertParams.append(InsertPhotoMetadataParams(
                 tripId: tripId,
                 memberId: memberId,
@@ -120,15 +135,18 @@ actor PhotoProcessingPipeline {
             state = .processing(completed: insertParams.count, total: total)
         }
 
+        let withLoc = insertParams.filter { $0.latitude != nil && $0.longitude != nil }.count
+        let withoutLoc = insertParams.count - withLoc
+
         do {
             try await metadataService.insertBatch(insertParams)
         } catch {
             state = .error(error.localizedDescription)
-            return ProcessingResult(processedCount: 0, unclaimedDevices: unclaimedDevices)
+            return ProcessingResult(processedCount: 0, withLocation: withLoc, withoutLocation: withoutLoc, totalInAlbum: totalInAlbum, skippedAlreadyProcessed: skippedCount, uniqueDevicesWithoutLocation: devicesWithoutLocation.count, unclaimedDevices: unclaimedDevices)
         }
 
         state = .complete(newCount: insertParams.count)
-        return ProcessingResult(processedCount: insertParams.count, unclaimedDevices: unclaimedDevices)
+        return ProcessingResult(processedCount: insertParams.count, withLocation: withLoc, withoutLocation: withoutLoc, totalInAlbum: totalInAlbum, skippedAlreadyProcessed: skippedCount, uniqueDevicesWithoutLocation: devicesWithoutLocation.count, unclaimedDevices: unclaimedDevices)
     }
 
     static func diffAssetIds(album: [String], existing: Set<String>) -> [String] {

@@ -51,10 +51,16 @@ struct CategoryMapperLabelTests {
 
     @Test("unknown labels return nil")
     func unknownLabels() {
-        #expect(CategoryMapper.categoryFor(label: "person") == nil)
         #expect(CategoryMapper.categoryFor(label: "car") == nil)
         #expect(CategoryMapper.categoryFor(label: "unknown_thing") == nil)
         #expect(CategoryMapper.categoryFor(label: "text") == nil)
+    }
+
+    @Test("people labels map to people category")
+    func peopleLabels() {
+        #expect(CategoryMapper.categoryFor(label: "person") == .people)
+        #expect(CategoryMapper.categoryFor(label: "portrait") == .people)
+        #expect(CategoryMapper.categoryFor(label: "selfie") == .people)
     }
 
     @Test("labels are case insensitive")
@@ -87,32 +93,54 @@ struct CategoryMapperObservationTests {
         #expect(abs(result.confidence - 0.7) < 0.01)
     }
 
-    @Test("defaults to activity when no labels match")
-    func defaultsToActivity() {
+    @Test("person as main subject maps to people")
+    func personMapsToPeople() {
         let observations = [
             makeObservation(identifier: "person", confidence: 0.9),
+            makeObservation(identifier: "text", confidence: 0.1),
+        ]
+
+        let result = CategoryMapper.map(observations: observations)
+        #expect(result.category == .people)
+    }
+
+    @Test("person with strong scenery prefers scenery")
+    func personWithSceneryPrefersScenery() {
+        let observations = [
+            makeObservation(identifier: "person", confidence: 0.6),
+            makeObservation(identifier: "landscape", confidence: 0.5),
+        ]
+
+        let result = CategoryMapper.map(observations: observations)
+        #expect(result.category == .scenery)
+    }
+
+    @Test("unrecognized labels with decent confidence default to activity")
+    func unknownDefaultsToActivity() {
+        let observations = [
+            makeObservation(identifier: "vehicle", confidence: 0.8),
             makeObservation(identifier: "text", confidence: 0.5),
-            makeObservation(identifier: "vehicle", confidence: 0.3),
         ]
 
         let result = CategoryMapper.map(observations: observations)
         #expect(result.category == .activity)
-        #expect(abs(result.confidence - 0.5) < 0.01)
     }
 
-    @Test("defaults to activity for empty observations")
+    @Test("empty observations default to miscellaneous")
     func emptyObservations() {
         let result = CategoryMapper.map(observations: [])
-        #expect(result.category == .activity)
+        #expect(result.category == .miscellaneous)
     }
 
-    @Test("only four categories exist")
-    func onlyFourCategories() {
-        #expect(PhotoCategory.allCases.count == 4)
+    @Test("all six categories exist")
+    func allCategoriesExist() {
+        #expect(PhotoCategory.allCases.count == 6)
         #expect(PhotoCategory.allCases.contains(.food))
         #expect(PhotoCategory.allCases.contains(.scenery))
         #expect(PhotoCategory.allCases.contains(.landmark))
         #expect(PhotoCategory.allCases.contains(.activity))
+        #expect(PhotoCategory.allCases.contains(.people))
+        #expect(PhotoCategory.allCases.contains(.miscellaneous))
     }
 
     @Test("prefers food over scenery when food is higher confidence")

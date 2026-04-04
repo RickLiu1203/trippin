@@ -11,6 +11,7 @@ struct TripDetailScreen: View {
     @State private var viewModel: TripDetailViewModel
     @Environment(AppRouter.self) private var router
     @Environment(AuthViewModel.self) private var authViewModel
+    @State private var selectedEvent: TimelineEvent?
 
     init(tripId: UUID) {
         _viewModel = State(initialValue: TripDetailViewModel(tripId: tripId))
@@ -70,6 +71,15 @@ struct TripDetailScreen: View {
                 ShareTripSheet(shareCode: trip.shareCode)
             }
         }
+        .sheet(item: $selectedEvent) { event in
+            NavigationStack {
+                EventDetailScreen(
+                    event: event,
+                    photos: viewModel.photosForEvent(event),
+                    members: viewModel.members
+                )
+            }
+        }
         .sheet(isPresented: $viewModel.showLinkAlbumSheet) {
             LinkAlbumSheet { albumId in
                 Task { await viewModel.linkAlbum(albumId) }
@@ -98,7 +108,21 @@ struct TripDetailScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 albumSection(trip)
-                timelinePlaceholder
+                processingBanner
+
+                if viewModel.timelineDays.isEmpty && !isProcessing {
+                    timelinePlaceholder
+                } else {
+                    TripDetailTimelineSection(
+                        days: viewModel.timelineDays,
+                        members: viewModel.members,
+                        metadataByPhotoId: viewModel.metadataById,
+                        onEventTap: { eventId in
+                            selectedEvent = viewModel.eventById(eventId)
+                        }
+                    )
+                }
+
                 TripDetailMembersSection(
                     members: viewModel.members,
                     isOwner: viewModel.isOwner,
@@ -171,6 +195,78 @@ struct TripDetailScreen: View {
                 .accessibilityLabel("Link album")
                 .accessibilityHint("Double tap to select a shared album for this trip")
             }
+        }
+    }
+
+    private var isProcessing: Bool {
+        if case .processing = viewModel.processingState { return true }
+        return false
+    }
+
+    @ViewBuilder
+    private var processingBanner: some View {
+        switch viewModel.processingState {
+        case .processing(let completed, let total):
+            HStack(spacing: Spacing.sm) {
+                ProgressView()
+                    .scaleEffect(0.8)
+                if total > 0 {
+                    Text("Processing \(completed)/\(total) photos...")
+                        .font(.paperBody(14))
+                        .foregroundStyle(Color.paperTextSecondary)
+                } else {
+                    Text("Scanning album...")
+                        .font(.paperBody(14))
+                        .foregroundStyle(Color.paperTextSecondary)
+                }
+                Spacer()
+            }
+            .padding(Spacing.sm)
+            .background(Color.paperSecondary.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+            .padding(.horizontal, Spacing.md)
+        case .complete, .idle:
+            syncStatusBanner
+        case .error(let msg):
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.paperDanger)
+                Text(msg)
+                    .font(.paperBody(14))
+                    .foregroundStyle(Color.paperText)
+                    .lineLimit(2)
+                Spacer()
+            }
+            .padding(Spacing.sm)
+            .background(Color.paperDanger.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+            .padding(.horizontal, Spacing.md)
+        default:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private var syncStatusBanner: some View {
+        if viewModel.syncedPhotoCount > 0 || viewModel.waitingDeviceCount > 0 {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                if viewModel.waitingDeviceCount > 0 {
+                    let n = viewModel.waitingDeviceCount
+                    let w = viewModel.waitingPhotoCount
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "person.crop.circle.badge.clock")
+                            .foregroundStyle(Color.paperWarning)
+                        Text("Synced \(viewModel.syncedPhotoCount) photos \u{00B7} waiting on \(n) \(n == 1 ? "person" : "people") (\(w) photos)")
+                            .font(.paperBody(13))
+                            .foregroundStyle(Color.paperText)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.sm)
+            .background(viewModel.waitingDeviceCount > 0 ? Color.paperWarning.opacity(0.1) : Color.paperSuccess.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+            .padding(.horizontal, Spacing.md)
         }
     }
 

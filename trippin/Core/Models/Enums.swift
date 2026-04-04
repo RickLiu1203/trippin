@@ -19,6 +19,8 @@ enum PhotoCategory: String, Codable, Sendable, CaseIterable {
     case scenery
     case landmark
     case activity
+    case people
+    case miscellaneous
 }
 
 enum MemberRole: String, Codable, Sendable {

@@ -11,6 +11,7 @@ import Supabase
 @MainActor
 protocol PhotoMetadataService: Sendable {
     func fetchExistingAssetIds(tripId: UUID) async throws -> Set<String>
+    func fetchAll(tripId: UUID) async throws -> [PhotoMetadata]
     func insertBatch(_ metadata: [InsertPhotoMetadataParams]) async throws
 }
 
@@ -51,6 +52,15 @@ final class SupabasePhotoMetadataService: PhotoMetadataService {
             .execute()
             .value
         return Set(rows.map(\.localAssetId))
+    }
+
+    func fetchAll(tripId: UUID) async throws -> [PhotoMetadata] {
+        try await supabase
+            .from("photo_metadata")
+            .select()
+            .eq("trip_id", value: tripId.uuidString)
+            .execute()
+            .value
     }
 
     func insertBatch(_ metadata: [InsertPhotoMetadataParams]) async throws {
