@@ -27,7 +27,7 @@ final class SupabaseTripMemberService: TripMemberService {
     }
 
     func addMember(tripId: UUID, userId: UUID, displayName: String, emoji: String, color: String, role: MemberRole) async throws -> TripMember {
-        try await supabase
+        let results: [TripMember] = try await supabase
             .from("trip_members")
             .insert(InsertMemberParams(
                 tripId: tripId,
@@ -38,9 +38,12 @@ final class SupabaseTripMemberService: TripMemberService {
                 role: role.rawValue
             ))
             .select()
-            .single()
             .execute()
             .value
+        guard let member = results.first else {
+            throw TripServiceError.notAuthenticated
+        }
+        return member
     }
 
     func removeMember(id: UUID) async throws {

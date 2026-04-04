@@ -28,7 +28,7 @@ final class SupabaseDeviceMappingService: DeviceMappingService {
     }
 
     func createMapping(tripId: UUID, cameraIdentifier: String, memberId: UUID) async throws -> DeviceMapping {
-        try await supabase
+        let results: [DeviceMapping] = try await supabase
             .from("device_mappings")
             .insert(CreateDeviceMappingParams(
                 tripId: tripId,
@@ -36,9 +36,12 @@ final class SupabaseDeviceMappingService: DeviceMappingService {
                 memberId: memberId
             ))
             .select()
-            .single()
             .execute()
             .value
+        guard let mapping = results.first else {
+            throw TripServiceError.notAuthenticated
+        }
+        return mapping
     }
 }
 

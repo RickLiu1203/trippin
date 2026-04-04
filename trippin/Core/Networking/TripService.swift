@@ -54,28 +54,30 @@ final class SupabaseTripService: TripService {
             throw TripServiceError.notAuthenticated
         }
 
-        let trip: Trip = try await supabase
+        let trips: [Trip] = try await supabase
             .from("trips")
             .insert(CreateTripParams(ownerId: user.id, name: name))
             .select()
-            .single()
             .execute()
             .value
+        guard let trip = trips.first else {
+            throw TripServiceError.notAuthenticated
+        }
 
-        let profile: Profile? = try? await supabase
+        let profiles: [Profile] = (try? await supabase
             .from("profiles")
             .select()
             .eq("id", value: user.id.uuidString)
-            .single()
+            .limit(1)
             .execute()
-            .value
+            .value) ?? []
 
         _ = try await supabase
             .from("trip_members")
             .insert(CreateMemberParams(
                 tripId: trip.id,
                 userId: user.id,
-                displayName: profile?.displayName ?? "",
+                displayName: profiles.first?.displayName ?? "",
                 emoji: "\u{1F338}",
                 color: "#FF6B6B",
                 role: "owner"
@@ -86,14 +88,17 @@ final class SupabaseTripService: TripService {
     }
 
     func updateTrip(id: UUID, name: String) async throws -> Trip {
-        try await supabase
+        let results: [Trip] = try await supabase
             .from("trips")
             .update(UpdateTripParams(name: name))
             .eq("id", value: id.uuidString)
             .select()
-            .single()
             .execute()
             .value
+        guard let trip = results.first else {
+            throw TripServiceError.notAuthenticated
+        }
+        return trip
     }
 
     func deleteTrip(id: UUID) async throws {
@@ -105,24 +110,31 @@ final class SupabaseTripService: TripService {
     }
 
     func fetchTrip(id: UUID) async throws -> Trip {
-        try await supabase
+        let results: [Trip] = try await supabase
             .from("trips")
             .select()
             .eq("id", value: id.uuidString)
-            .single()
+            .limit(1)
             .execute()
             .value
+        guard let trip = results.first else {
+            throw TripServiceError.notAuthenticated
+        }
+        return trip
     }
 
     func updateTripAlbum(id: UUID, albumIdentifier: String) async throws -> Trip {
-        try await supabase
+        let results: [Trip] = try await supabase
             .from("trips")
             .update(UpdateAlbumParams(albumIdentifier: albumIdentifier))
             .eq("id", value: id.uuidString)
             .select()
-            .single()
             .execute()
             .value
+        guard let trip = results.first else {
+            throw TripServiceError.notAuthenticated
+        }
+        return trip
     }
 
     func fetchMembers(tripId: UUID) async throws -> [TripMember] {

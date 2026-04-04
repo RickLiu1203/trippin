@@ -7,6 +7,7 @@
 
 import Testing
 import Foundation
+import Photos
 @testable import trippin
 
 @MainActor
@@ -68,6 +69,10 @@ final class MockSharedAlbumService: SharedAlbumService {
 
     func fetchAlbum(id: String) async -> SharedAlbum? {
         albums.first { $0.id == id }
+    }
+
+    func fetchPhotos(albumIdentifier: String) async -> [PHAsset] {
+        []
     }
 }
 

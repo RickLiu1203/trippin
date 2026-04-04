@@ -18,6 +18,7 @@ struct SharedAlbum: Identifiable, Sendable {
 protocol SharedAlbumService: Sendable {
     func fetchSharedAlbums() async -> [SharedAlbum]
     func fetchAlbum(id: String) async -> SharedAlbum?
+    func fetchPhotos(albumIdentifier: String) async -> [PHAsset]
 }
 
 final class PhotoKitSharedAlbumService: SharedAlbumService {
@@ -37,6 +38,19 @@ final class PhotoKitSharedAlbumService: SharedAlbumService {
             ))
         }
         return albums
+    }
+
+    func fetchPhotos(albumIdentifier: String) async -> [PHAsset] {
+        guard let collection = PHAssetCollection.fetchAssetCollections(
+            withLocalIdentifiers: [albumIdentifier], options: nil
+        ).firstObject else { return [] }
+
+        let fetchResult = PHAsset.fetchAssets(in: collection, options: nil)
+        var assets: [PHAsset] = []
+        fetchResult.enumerateObjects { asset, _, _ in
+            assets.append(asset)
+        }
+        return assets
     }
 
     func fetchAlbum(id: String) async -> SharedAlbum? {
