@@ -15,11 +15,10 @@ enum TripServiceError: Error {
 @MainActor
 protocol TripService: Sendable {
     func fetchTrips() async throws -> [Trip]
-    func createTrip(name: String) async throws -> Trip
+    func createTrip(name: String, albumIdentifier: String) async throws -> Trip
     func updateTrip(id: UUID, name: String) async throws -> Trip
     func deleteTrip(id: UUID) async throws
     func fetchTrip(id: UUID) async throws -> Trip
-    func updateTripAlbum(id: UUID, albumIdentifier: String) async throws -> Trip
     func fetchMembers(tripId: UUID) async throws -> [TripMember]
     func fetchPhotoCount(tripId: UUID) async throws -> Int
 }
@@ -49,14 +48,14 @@ final class SupabaseTripService: TripService {
             .value
     }
 
-    func createTrip(name: String) async throws -> Trip {
+    func createTrip(name: String, albumIdentifier: String) async throws -> Trip {
         guard let user = supabase.auth.currentUser else {
             throw TripServiceError.notAuthenticated
         }
 
         let trips: [Trip] = try await supabase
             .from("trips")
-            .insert(CreateTripParams(ownerId: user.id, name: name))
+            .insert(CreateTripParams(ownerId: user.id, name: name, albumIdentifier: albumIdentifier))
             .select()
             .execute()
             .value
@@ -123,20 +122,6 @@ final class SupabaseTripService: TripService {
         return trip
     }
 
-    func updateTripAlbum(id: UUID, albumIdentifier: String) async throws -> Trip {
-        let results: [Trip] = try await supabase
-            .from("trips")
-            .update(UpdateAlbumParams(albumIdentifier: albumIdentifier))
-            .eq("id", value: id.uuidString)
-            .select()
-            .execute()
-            .value
-        guard let trip = results.first else {
-            throw TripServiceError.notAuthenticated
-        }
-        return trip
-    }
-
     func fetchMembers(tripId: UUID) async throws -> [TripMember] {
         try await supabase
             .from("trip_members")
@@ -167,10 +152,12 @@ private struct TripIdRow: Decodable {
 private struct CreateTripParams: Encodable {
     let ownerId: UUID
     let name: String
+    let albumIdentifier: String
 
     enum CodingKeys: String, CodingKey {
         case ownerId = "owner_id"
         case name
+        case albumIdentifier = "album_identifier"
     }
 }
 
@@ -192,12 +179,4 @@ private struct CreateMemberParams: Encodable {
 
 private struct UpdateTripParams: Encodable {
     let name: String
-}
-
-private struct UpdateAlbumParams: Encodable {
-    let albumIdentifier: String
-
-    enum CodingKeys: String, CodingKey {
-        case albumIdentifier = "album_identifier"
-    }
 }

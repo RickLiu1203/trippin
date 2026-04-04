@@ -204,18 +204,29 @@ struct EXIFDateParsingTests {
     }
 }
 
-@Suite("EXIF Timezone Resolution Tests")
+@Suite("EXIF Timezone Tests")
 struct EXIFTimezoneTests {
-    @Test("resolves timezone for known coordinates")
-    func resolveKnownTimezone() async {
-        let tz = await PhotoKitEXIFExtractor.resolveTimezone(latitude: 35.6762, longitude: 139.6503)
-        #expect(tz.secondsFromGMT() >= 9 * 3600 - 1800)
-        #expect(tz.secondsFromGMT() <= 9 * 3600 + 1800)
+    @Test("Tokyo longitude resolves to ~UTC+9")
+    func tokyoTimezone() {
+        let tz = PhotoKitEXIFExtractor.timezoneFromLongitude(139.6503)
+        #expect(tz.secondsFromGMT() == 9 * 3600)
     }
 
-    @Test("falls back to longitude approximation on geocode failure")
-    func longitudeFallback() async {
-        let tz = await PhotoKitEXIFExtractor.resolveTimezone(latitude: 0.0, longitude: 0.0)
-        #expect(tz.secondsFromGMT() == 0 || tz.identifier != "")
+    @Test("New York longitude resolves to ~UTC-5")
+    func newYorkTimezone() {
+        let tz = PhotoKitEXIFExtractor.timezoneFromLongitude(-74.0060)
+        #expect(tz.secondsFromGMT() == -5 * 3600)
+    }
+
+    @Test("nil longitude returns current timezone")
+    func nilLongitude() {
+        let tz = PhotoKitEXIFExtractor.timezoneFromLongitude(nil)
+        #expect(tz.identifier == TimeZone.current.identifier)
+    }
+
+    @Test("zero longitude returns UTC")
+    func zeroLongitude() {
+        let tz = PhotoKitEXIFExtractor.timezoneFromLongitude(0.0)
+        #expect(tz.secondsFromGMT() == 0)
     }
 }

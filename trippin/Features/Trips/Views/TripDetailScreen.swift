@@ -57,11 +57,7 @@ struct TripDetailScreen: View {
         }
         .sheet(isPresented: $viewModel.showEditSheet) {
             if let trip = viewModel.trip {
-                EditTripScreen(
-                    tripId: trip.id,
-                    currentName: trip.name,
-                    albumIdentifier: trip.albumIdentifier
-                ) {
+                EditTripScreen(tripId: trip.id, currentName: trip.name) {
                     Task { await viewModel.loadTrip() }
                 }
             }
@@ -78,11 +74,6 @@ struct TripDetailScreen: View {
                     photos: viewModel.photosForEvent(event),
                     members: viewModel.members
                 )
-            }
-        }
-        .sheet(isPresented: $viewModel.showLinkAlbumSheet) {
-            LinkAlbumSheet { albumId in
-                Task { await viewModel.linkAlbum(albumId) }
             }
         }
         .alert(
@@ -107,7 +98,6 @@ struct TripDetailScreen: View {
     private func tripContent(_ trip: Trip) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
-                albumSection(trip)
                 processingBanner
 
                 if viewModel.timelineDays.isEmpty && !isProcessing {
@@ -133,68 +123,6 @@ struct TripDetailScreen: View {
             }
             .padding(.horizontal, Spacing.md)
             .padding(.top, Spacing.sm)
-        }
-    }
-
-    @ViewBuilder
-    private func albumSection(_ trip: Trip) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Album")
-                .font(.paperBody(14, weight: .medium))
-                .foregroundStyle(Color.paperTextSecondary)
-
-            if let album = viewModel.linkedAlbum {
-                HStack {
-                    Image(systemName: "photo.on.rectangle.angled")
-                        .foregroundStyle(Color.paperSuccess)
-                    VStack(alignment: .leading, spacing: Spacing.xxxs) {
-                        Text(album.title)
-                            .font(.paperBody(16, weight: .medium))
-                            .foregroundStyle(Color.paperText)
-                        Text("\(album.assetCount) photos")
-                            .font(.paperBody(14))
-                            .foregroundStyle(Color.paperTextSecondary)
-                    }
-                    Spacer()
-                    Button("Change") {
-                        viewModel.showLinkAlbumSheet = true
-                    }
-                    .font(.paperBody(14, weight: .medium))
-                    .foregroundStyle(Color.paperSecondary)
-                }
-                .paperCard()
-            } else if trip.albumIdentifier != nil {
-                HStack {
-                    Image(systemName: "photo.on.rectangle.angled")
-                        .foregroundStyle(Color.paperTextSecondary)
-                    Text("Album linked")
-                        .font(.paperBody())
-                        .foregroundStyle(Color.paperText)
-                    Spacer()
-                    Button("Change") {
-                        viewModel.showLinkAlbumSheet = true
-                    }
-                    .font(.paperBody(14, weight: .medium))
-                    .foregroundStyle(Color.paperSecondary)
-                }
-                .paperCard()
-            } else {
-                Button {
-                    viewModel.showLinkAlbumSheet = true
-                } label: {
-                    HStack {
-                        Image(systemName: "plus.circle")
-                        Text("Link iCloud Shared Album")
-                            .font(.paperBody(16, weight: .medium))
-                    }
-                    .foregroundStyle(Color.paperSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.md)
-                }
-                .paperCard()
-                .accessibilityLabel("Link album")
-                .accessibilityHint("Double tap to select a shared album for this trip")
-            }
         }
     }
 
@@ -224,7 +152,6 @@ struct TripDetailScreen: View {
             .padding(Spacing.sm)
             .background(Color.paperSecondary.opacity(0.1))
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-            .padding(.horizontal, Spacing.md)
         case .complete, .idle:
             syncStatusBanner
         case .error(let msg):
@@ -240,7 +167,6 @@ struct TripDetailScreen: View {
             .padding(Spacing.sm)
             .background(Color.paperDanger.opacity(0.1))
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-            .padding(.horizontal, Spacing.md)
         default:
             EmptyView()
         }
@@ -248,25 +174,20 @@ struct TripDetailScreen: View {
 
     @ViewBuilder
     private var syncStatusBanner: some View {
-        if viewModel.syncedPhotoCount > 0 || viewModel.waitingDeviceCount > 0 {
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                if viewModel.waitingDeviceCount > 0 {
-                    let n = viewModel.waitingDeviceCount
-                    let w = viewModel.waitingPhotoCount
-                    HStack(spacing: Spacing.xs) {
-                        Image(systemName: "person.crop.circle.badge.clock")
-                            .foregroundStyle(Color.paperWarning)
-                        Text("Synced \(viewModel.syncedPhotoCount) photos \u{00B7} waiting on \(n) \(n == 1 ? "person" : "people") (\(w) photos)")
-                            .font(.paperBody(13))
-                            .foregroundStyle(Color.paperText)
-                    }
-                }
+        if viewModel.waitingDeviceCount > 0 {
+            let n = viewModel.waitingDeviceCount
+            let w = viewModel.waitingPhotoCount
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "person.crop.circle.badge.clock")
+                    .foregroundStyle(Color.paperWarning)
+                Text("Synced \(viewModel.syncedPhotoCount) photos \u{00B7} waiting on \(n) \(n == 1 ? "person" : "people") (\(w) photos)")
+                    .font(.paperBody(13))
+                    .foregroundStyle(Color.paperText)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(Spacing.sm)
-            .background(viewModel.waitingDeviceCount > 0 ? Color.paperWarning.opacity(0.1) : Color.paperSuccess.opacity(0.1))
+            .background(Color.paperWarning.opacity(0.1))
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-            .padding(.horizontal, Spacing.md)
         }
     }
 
@@ -278,7 +199,7 @@ struct TripDetailScreen: View {
             Text("Timeline")
                 .font(.paperBody(16, weight: .medium))
                 .foregroundStyle(Color.paperText)
-            Text("Link an album and process photos to build your trip timeline")
+            Text("Processing photos to build your trip timeline...")
                 .font(.paperBody(14))
                 .foregroundStyle(Color.paperTextSecondary)
                 .multilineTextAlignment(.center)

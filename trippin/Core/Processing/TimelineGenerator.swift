@@ -149,10 +149,13 @@ enum TimelineGenerator {
     }
 
     static func groupByDay(events: [TimelineEvent]) -> [TimelineDay] {
-        guard let earliest = events.first(where: { !$0.isTravelGap })?.startTime else { return [] }
+        guard let firstEvent = events.first(where: { !$0.isTravelGap }) else { return [] }
 
-        let calendar = Calendar.current
-        let startOfFirstDay = calendar.startOfDay(for: earliest)
+        let tripTimezone = PhotoKitEXIFExtractor.timezoneFromLongitude(firstEvent.centroidLon)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = tripTimezone
+
+        let startOfFirstDay = calendar.startOfDay(for: firstEvent.startTime)
 
         var dayMap: [Int: [TimelineEvent]] = [:]
         for event in events {

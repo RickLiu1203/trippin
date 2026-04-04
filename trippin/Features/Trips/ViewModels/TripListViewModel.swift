@@ -24,6 +24,10 @@ final class TripListViewModel {
         self.tripService = tripService ?? SupabaseTripService()
     }
 
+    var linkedAlbumIds: Set<String> {
+        Set(trips.compactMap(\.albumIdentifier))
+    }
+
     func loadTrips() async {
         isLoading = true
         error = nil
@@ -37,15 +41,17 @@ final class TripListViewModel {
         }
     }
 
-    func createTrip(name: String) async {
+    func createTripFromAlbum(_ album: SharedAlbum) async -> UUID? {
         do {
-            let trip = try await tripService.createTrip(name: name)
+            let trip = try await tripService.createTrip(name: album.title, albumIdentifier: album.id)
             trips.insert(trip, at: 0)
             let members = try? await tripService.fetchMembers(tripId: trip.id)
             membersByTrip[trip.id] = members ?? []
             photoCountsByTrip[trip.id] = 0
+            return trip.id
         } catch {
             self.error = error.localizedDescription
+            return nil
         }
     }
 

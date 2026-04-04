@@ -54,9 +54,15 @@ struct TripDetailTimelineSection: View {
         }
     }
 
+    private func timezoneForDay(_ day: TimelineDay) -> TimeZone {
+        let firstLon = day.events.first(where: { !$0.isTravelGap })?.centroidLon
+        return PhotoKitEXIFExtractor.timezoneFromLongitude(firstLon)
+    }
+
     private func dayContent(_ day: TimelineDay) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            DayCard(day: day)
+        let tz = timezoneForDay(day)
+        return VStack(alignment: .leading, spacing: 0) {
+            DayCard(day: day, localTimezone: tz)
 
             ForEach(Array(day.events.enumerated()), id: \.element.id) { index, event in
                 if event.isTravelGap {
@@ -72,7 +78,8 @@ struct TripDetailTimelineSection: View {
                         EventRow(
                             event: event,
                             assetIds: assetIdsForEvent(event),
-                            members: members
+                            members: members,
+                            localTimezone: tz
                         )
                     }
                     .buttonStyle(.plain)

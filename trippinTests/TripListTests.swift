@@ -26,24 +26,12 @@ final class MockTripService: TripService {
         return trip
     }
 
-    func updateTripAlbum(id: UUID, albumIdentifier: String) async throws -> Trip {
-        if shouldFail { throw TripServiceError.notAuthenticated }
-        guard let index = trips.firstIndex(where: { $0.id == id }) else {
-            throw TripServiceError.notAuthenticated
-        }
-        var trip = trips[index]
-        trip.albumIdentifier = albumIdentifier
-        trip.updatedAt = Date()
-        trips[index] = trip
-        return trip
-    }
-
     func fetchTrips() async throws -> [Trip] {
         if shouldFail { throw TripServiceError.notAuthenticated }
         return trips
     }
 
-    func createTrip(name: String) async throws -> Trip {
+    func createTrip(name: String, albumIdentifier: String) async throws -> Trip {
         if shouldFail { throw TripServiceError.notAuthenticated }
         createCallCount += 1
         let trip = Trip(
@@ -51,7 +39,7 @@ final class MockTripService: TripService {
             ownerId: UUID(),
             name: name,
             shareCode: "abc123def456",
-            albumIdentifier: nil,
+            albumIdentifier: albumIdentifier,
             createdAt: Date(),
             updatedAt: Date()
         )
@@ -135,7 +123,7 @@ struct TripServiceMockTests {
     @MainActor
     func createFetchRoundTrip() async throws {
         let service = MockTripService()
-        let created = try await service.createTrip(name: "Tokyo 2024")
+        let created = try await service.createTrip(name: "Tokyo 2024", albumIdentifier: "album-1")
         let fetched = try await service.fetchTrips()
 
         #expect(fetched.count == 1)
@@ -147,7 +135,7 @@ struct TripServiceMockTests {
     @MainActor
     func createTripCreatesOwner() async throws {
         let service = MockTripService()
-        let trip = try await service.createTrip(name: "Paris Trip")
+        let trip = try await service.createTrip(name: "Paris Trip", albumIdentifier: "album-2")
         let members = try await service.fetchMembers(tripId: trip.id)
 
         #expect(members.count == 1)
@@ -158,7 +146,7 @@ struct TripServiceMockTests {
     @MainActor
     func deleteTripRemoves() async throws {
         let service = MockTripService()
-        let trip = try await service.createTrip(name: "To Delete")
+        let trip = try await service.createTrip(name: "To Delete", albumIdentifier: "album-3")
         try await service.deleteTrip(id: trip.id)
         let fetched = try await service.fetchTrips()
 
@@ -169,7 +157,7 @@ struct TripServiceMockTests {
     @MainActor
     func updateTripName() async throws {
         let service = MockTripService()
-        let trip = try await service.createTrip(name: "Old Name")
+        let trip = try await service.createTrip(name: "Old Name", albumIdentifier: "album-4")
         let updated = try await service.updateTrip(id: trip.id, name: "New Name")
 
         #expect(updated.name == "New Name")
@@ -240,7 +228,7 @@ struct TripListViewModelTests {
         let service = MockTripService()
         let viewModel = TripListViewModel(tripService: service)
 
-        await viewModel.createTrip(name: "Weekend Getaway")
+        _ = await viewModel.createTripFromAlbum(SharedAlbum(id: "album-wg", title: "Weekend Getaway", assetCount: 10, isShared: true))
 
         #expect(viewModel.trips.count == 1)
         #expect(viewModel.trips[0].name == "Weekend Getaway")
@@ -257,7 +245,7 @@ struct TripListViewModelTests {
         let viewModel = TripListViewModel(tripService: service)
         await viewModel.loadTrips()
 
-        await viewModel.createTrip(name: "New Trip")
+        _ = await viewModel.createTripFromAlbum(SharedAlbum(id: "album-new", title: "New Trip", assetCount: 5, isShared: false))
 
         #expect(viewModel.trips.count == 2)
         #expect(viewModel.trips[0].name == "New Trip")
@@ -271,7 +259,7 @@ struct TripListViewModelTests {
         service.shouldFail = true
         let viewModel = TripListViewModel(tripService: service)
 
-        await viewModel.createTrip(name: "Fail Trip")
+        _ = await viewModel.createTripFromAlbum(SharedAlbum(id: "album-fail", title: "Fail Trip", assetCount: 3, isShared: true))
 
         #expect(viewModel.trips.isEmpty)
         #expect(viewModel.error != nil)

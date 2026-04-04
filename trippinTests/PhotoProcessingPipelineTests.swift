@@ -36,7 +36,7 @@ final class MockPhotoMetadataService: PhotoMetadataService {
 final class PipelineMockAlbumService: SharedAlbumService {
     var photoAssets: [PHAsset] = []
 
-    func fetchSharedAlbums() async -> [SharedAlbum] { [] }
+    func fetchAlbums() async -> [SharedAlbum] { [] }
     func fetchAlbum(id: String) async -> SharedAlbum? { nil }
     func fetchPhotos(albumIdentifier: String) async -> [PHAsset] { photoAssets }
 }

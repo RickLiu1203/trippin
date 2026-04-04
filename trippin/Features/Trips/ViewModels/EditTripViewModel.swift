@@ -12,18 +12,15 @@ import Observation
 @Observable
 final class EditTripViewModel {
     var name: String
-    private(set) var albumIdentifier: String?
     private(set) var isSaving = false
     var error: String?
-    var showLinkAlbumSheet = false
 
     let tripId: UUID
     let tripService: TripService
 
-    init(tripId: UUID, currentName: String, albumIdentifier: String?, tripService: TripService? = nil) {
+    init(tripId: UUID, currentName: String, tripService: TripService? = nil) {
         self.tripId = tripId
         self.name = currentName
-        self.albumIdentifier = albumIdentifier
         self.tripService = tripService ?? SupabaseTripService()
     }
 
@@ -46,15 +43,6 @@ final class EditTripViewModel {
             self.error = error.localizedDescription
             isSaving = false
             return false
-        }
-    }
-
-    func linkAlbum(_ identifier: String) async {
-        do {
-            _ = try await tripService.updateTripAlbum(id: tripId, albumIdentifier: identifier)
-            albumIdentifier = identifier
-        } catch {
-            self.error = error.localizedDescription
         }
     }
 }

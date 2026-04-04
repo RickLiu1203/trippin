@@ -12,11 +12,10 @@ struct EditTripScreen: View {
     @Environment(\.dismiss) private var dismiss
     let onSave: () -> Void
 
-    init(tripId: UUID, currentName: String, albumIdentifier: String?, onSave: @escaping () -> Void) {
+    init(tripId: UUID, currentName: String, onSave: @escaping () -> Void) {
         _viewModel = State(initialValue: EditTripViewModel(
             tripId: tripId,
-            currentName: currentName,
-            albumIdentifier: albumIdentifier
+            currentName: currentName
         ))
         self.onSave = onSave
     }
@@ -33,39 +32,6 @@ struct EditTripScreen: View {
                         .textFieldStyle(.paper)
                         .submitLabel(.done)
                         .accessibilityLabel("Trip name")
-                }
-
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("Album")
-                        .font(.paperBody(14, weight: .medium))
-                        .foregroundStyle(Color.paperTextSecondary)
-
-                    Button {
-                        viewModel.showLinkAlbumSheet = true
-                    } label: {
-                        HStack {
-                            Image(systemName: viewModel.albumIdentifier != nil
-                                  ? "photo.on.rectangle.angled"
-                                  : "plus.circle")
-                            Text(viewModel.albumIdentifier != nil
-                                 ? "Change Album"
-                                 : "Link Album")
-                                .font(.paperBody(16, weight: .medium))
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.paperBody(14))
-                                .foregroundStyle(Color.paperTextSecondary)
-                        }
-                        .foregroundStyle(Color.paperSecondary)
-                        .padding(Spacing.sm)
-                        .background(Color.paperSurface)
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CornerRadius.sm)
-                                .stroke(Color.paperBorder, lineWidth: 1)
-                        )
-                    }
-                    .accessibilityLabel(viewModel.albumIdentifier != nil ? "Change album" : "Link album")
                 }
 
                 Spacer()
@@ -89,11 +55,6 @@ struct EditTripScreen: View {
                     }
                     .font(.paperBody(16, weight: .semibold))
                     .disabled(!viewModel.isValid || viewModel.isSaving)
-                }
-            }
-            .sheet(isPresented: $viewModel.showLinkAlbumSheet) {
-                LinkAlbumSheet { albumId in
-                    Task { await viewModel.linkAlbum(albumId) }
                 }
             }
         }

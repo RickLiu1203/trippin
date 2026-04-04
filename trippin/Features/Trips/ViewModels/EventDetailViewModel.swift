@@ -25,13 +25,21 @@ final class EventDetailViewModel {
         photos.map(\.localAssetId)
     }
 
+    var localTimezone: TimeZone {
+        PhotoKitEXIFExtractor.timezoneFromLongitude(event.centroidLon)
+    }
+
     var timeFormatter: DateFormatter {
         let f = DateFormatter()
         f.dateFormat = "h:mm a"
+        f.timeZone = localTimezone
         return f
     }
 
     var timeRange: String {
-        "\(timeFormatter.string(from: event.startTime)) – \(timeFormatter.string(from: event.endTime))"
+        if event.photoCount <= 1 || event.startTime == event.endTime {
+            return timeFormatter.string(from: event.startTime)
+        }
+        return "\(timeFormatter.string(from: event.startTime)) – \(timeFormatter.string(from: event.endTime))"
     }
 }

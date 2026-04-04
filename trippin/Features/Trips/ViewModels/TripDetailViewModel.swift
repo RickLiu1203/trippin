@@ -13,7 +13,6 @@ import Observation
 final class TripDetailViewModel {
     private(set) var trip: Trip?
     private(set) var members: [TripMember] = []
-    private(set) var linkedAlbum: SharedAlbum?
     private(set) var timelineDays: [TimelineDay] = []
     private(set) var photoMetadata: [PhotoMetadata] = []
     private(set) var metadataById: [UUID: PhotoMetadata] = [:]
@@ -25,7 +24,6 @@ final class TripDetailViewModel {
     private(set) var waitingPhotoCount: Int = 0
     var error: String?
     var showEditSheet = false
-    var showLinkAlbumSheet = false
     var showShareSheet = false
     var userId: UUID?
 
@@ -64,9 +62,6 @@ final class TripDetailViewModel {
         do {
             trip = try await tripService.fetchTrip(id: tripId)
             members = try await memberService.fetchMembers(tripId: tripId)
-            if let albumId = trip?.albumIdentifier {
-                linkedAlbum = await albumService.fetchAlbum(id: albumId)
-            }
             await loadTimeline()
             isLoading = false
             if trip?.albumIdentifier != nil {
@@ -75,16 +70,6 @@ final class TripDetailViewModel {
         } catch {
             self.error = error.localizedDescription
             isLoading = false
-        }
-    }
-
-    func linkAlbum(_ albumIdentifier: String) async {
-        do {
-            trip = try await tripService.updateTripAlbum(id: tripId, albumIdentifier: albumIdentifier)
-            linkedAlbum = await albumService.fetchAlbum(id: albumIdentifier)
-            await processPhotos()
-        } catch {
-            self.error = error.localizedDescription
         }
     }
 

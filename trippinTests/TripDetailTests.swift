@@ -63,7 +63,7 @@ final class MockTripMemberService: TripMemberService {
 final class MockSharedAlbumService: SharedAlbumService {
     var albums: [SharedAlbum] = []
 
-    func fetchSharedAlbums() async -> [SharedAlbum] {
+    func fetchAlbums() async -> [SharedAlbum] {
         albums
     }
 
@@ -237,29 +237,6 @@ struct TripDetailViewModelTests {
         #expect(!viewModel.isLoading)
     }
 
-    @Test("linkAlbum updates trip album identifier")
-    @MainActor
-    func linkAlbumUpdates() async {
-        let tripService = MockTripService()
-        let albumService = MockSharedAlbumService()
-        albumService.albums = [SharedAlbum(id: "album-123", title: "Vacation", assetCount: 50)]
-
-        let trip = makeTrip()
-        tripService.trips = [trip]
-
-        let viewModel = TripDetailViewModel(
-            tripId: trip.id,
-            tripService: tripService,
-            memberService: MockTripMemberService(),
-            albumService: albumService
-        )
-        await viewModel.loadTrip()
-        await viewModel.linkAlbum("album-123")
-
-        #expect(viewModel.trip?.albumIdentifier == "album-123")
-        #expect(viewModel.linkedAlbum?.title == "Vacation")
-    }
-
     @Test("removeMember removes from list")
     @MainActor
     func removeMemberRemoves() async {
@@ -325,27 +302,6 @@ struct TripDetailViewModelTests {
         #expect(!viewModel.isOwner)
     }
 
-    @Test("loadTrip fetches linked album info")
-    @MainActor
-    func loadTripWithAlbum() async {
-        let tripService = MockTripService()
-        let albumService = MockSharedAlbumService()
-        albumService.albums = [SharedAlbum(id: "album-xyz", title: "Summer 2024", assetCount: 120)]
-
-        let trip = makeTrip(albumIdentifier: "album-xyz")
-        tripService.trips = [trip]
-
-        let viewModel = TripDetailViewModel(
-            tripId: trip.id,
-            tripService: tripService,
-            memberService: MockTripMemberService(),
-            albumService: albumService
-        )
-        await viewModel.loadTrip()
-
-        #expect(viewModel.linkedAlbum?.title == "Summer 2024")
-        #expect(viewModel.linkedAlbum?.assetCount == 120)
-    }
 }
 
 @Suite("EditTripViewModel Tests")
@@ -356,7 +312,6 @@ struct EditTripViewModelTests {
         let viewModel = EditTripViewModel(
             tripId: UUID(),
             currentName: "Paris Trip",
-            albumIdentifier: nil,
             tripService: MockTripService()
         )
         #expect(viewModel.name == "Paris Trip")
@@ -373,7 +328,6 @@ struct EditTripViewModelTests {
         let viewModel = EditTripViewModel(
             tripId: trip.id,
             currentName: "Old Name",
-            albumIdentifier: nil,
             tripService: service
         )
         viewModel.name = "New Name"
@@ -389,7 +343,6 @@ struct EditTripViewModelTests {
         let viewModel = EditTripViewModel(
             tripId: UUID(),
             currentName: "",
-            albumIdentifier: nil,
             tripService: MockTripService()
         )
         viewModel.name = "   "
@@ -399,38 +352,20 @@ struct EditTripViewModelTests {
         #expect(!viewModel.isValid)
     }
 
-    @Test("linkAlbum updates albumIdentifier")
-    @MainActor
-    func linkAlbumUpdatesIdentifier() async {
-        let service = MockTripService()
-        let trip = makeTrip()
-        service.trips = [trip]
-
-        let viewModel = EditTripViewModel(
-            tripId: trip.id,
-            currentName: trip.name,
-            albumIdentifier: nil,
-            tripService: service
-        )
-
-        await viewModel.linkAlbum("album-456")
-
-        #expect(viewModel.albumIdentifier == "album-456")
-    }
 }
 
 @Suite("SharedAlbumService Mock Tests")
 struct SharedAlbumServiceMockTests {
-    @Test("fetchSharedAlbums returns albums")
+    @Test("fetchAlbums returns albums")
     @MainActor
-    func fetchAlbums() async {
+    func fetchAllAlbums() async {
         let service = MockSharedAlbumService()
         service.albums = [
-            SharedAlbum(id: "1", title: "Trip A", assetCount: 10),
-            SharedAlbum(id: "2", title: "Trip B", assetCount: 20),
+            SharedAlbum(id: "1", title: "Trip A", assetCount: 10, isShared: true),
+            SharedAlbum(id: "2", title: "Trip B", assetCount: 20, isShared: false),
         ]
 
-        let result = await service.fetchSharedAlbums()
+        let result = await service.fetchAlbums()
         #expect(result.count == 2)
     }
 
@@ -438,7 +373,7 @@ struct SharedAlbumServiceMockTests {
     @MainActor
     func fetchSingleAlbum() async {
         let service = MockSharedAlbumService()
-        service.albums = [SharedAlbum(id: "abc", title: "My Album", assetCount: 42)]
+        service.albums = [SharedAlbum(id: "abc", title: "My Album", assetCount: 42, isShared: true)]
 
         let album = await service.fetchAlbum(id: "abc")
         #expect(album?.title == "My Album")

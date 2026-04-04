@@ -20,8 +20,8 @@ struct TripListScreen: View {
                 EmptyStateView(
                     icon: "suitcase",
                     title: "No trips yet",
-                    message: "Create your first trip to get started",
-                    actionTitle: "Create Trip"
+                    message: "Select an album to create your first trip",
+                    actionTitle: "New Trip"
                 ) {
                     viewModel.showCreateSheet = true
                 }
@@ -39,14 +39,16 @@ struct TripListScreen: View {
                     Image(systemName: "plus")
                         .foregroundStyle(Color.paperPrimary)
                 }
-                .accessibilityLabel("Create trip")
-                .accessibilityHint("Double tap to create a new trip")
+                .accessibilityLabel("New trip")
+                .accessibilityHint("Double tap to select an album and create a trip")
             }
         }
         .sheet(isPresented: $viewModel.showCreateSheet) {
-            CreateTripSheet { name in
+            CreateTripSheet(linkedAlbumIds: viewModel.linkedAlbumIds) { album in
                 Task {
-                    await viewModel.createTrip(name: name)
+                    if let tripId = await viewModel.createTripFromAlbum(album) {
+                        router.navigate(to: .tripDetail(tripId: tripId))
+                    }
                 }
             }
         }

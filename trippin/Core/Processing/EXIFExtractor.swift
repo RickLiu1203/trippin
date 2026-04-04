@@ -44,11 +44,7 @@ final class PhotoKitEXIFExtractor: EXIFExtractorService, @unchecked Sendable {
         let cameraInfo = Self.parseCameraInfo(from: properties)
         let rawDate = Self.parseRawDate(from: properties)
 
-        var timezone = TimeZone.current
-        if let gps {
-            timezone = await Self.resolveTimezone(latitude: gps.latitude, longitude: gps.longitude)
-        }
-
+        let timezone = Self.timezoneFromLongitude(gps?.longitude)
         let takenAt = Self.parseDate(rawDate, timezone: timezone) ?? asset.creationDate ?? Date()
 
         return ExtractedPhotoData(
@@ -150,15 +146,9 @@ final class PhotoKitEXIFExtractor: EXIFExtractorService, @unchecked Sendable {
         return formatter.date(from: rawDate)
     }
 
-    static func resolveTimezone(latitude: Double, longitude: Double) async -> TimeZone {
-        let location = CLLocation(latitude: latitude, longitude: longitude)
-        let geocoder = CLGeocoder()
-        do {
-            let placemarks = try await geocoder.reverseGeocodeLocation(location)
-            return placemarks.first?.timeZone ?? .current
-        } catch {
-            let offsetHours = Int(round(longitude / 15.0))
-            return TimeZone(secondsFromGMT: offsetHours * 3600) ?? .current
-        }
+    static func timezoneFromLongitude(_ longitude: Double?) -> TimeZone {
+        guard let longitude else { return .current }
+        let offsetHours = Int(round(longitude / 15.0))
+        return TimeZone(secondsFromGMT: offsetHours * 3600) ?? .current
     }
 }

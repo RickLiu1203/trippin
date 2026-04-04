@@ -9,11 +9,20 @@ import SwiftUI
 
 struct DayCard: View {
     let day: TimelineDay
+    let localTimezone: TimeZone
 
     private var dateFormatter: DateFormatter {
         let f = DateFormatter()
         f.dateFormat = "EEEE, MMM d"
+        f.timeZone = localTimezone
         return f
+    }
+
+    private var gmtOffset: String {
+        let seconds = localTimezone.secondsFromGMT()
+        let hours = seconds / 3600
+        let sign = hours >= 0 ? "+" : ""
+        return "GMT\(sign)\(hours)"
     }
 
     var body: some View {
@@ -22,9 +31,14 @@ struct DayCard: View {
                 Text("Day \(day.dayIndex + 1)")
                     .font(.paperDisplay(18, weight: .semibold))
                     .foregroundStyle(Color.paperText)
-                Text(dateFormatter.string(from: day.date))
-                    .font(.paperBody(14))
-                    .foregroundStyle(Color.paperTextSecondary)
+                HStack(spacing: Spacing.xs) {
+                    Text(dateFormatter.string(from: day.date))
+                        .font(.paperBody(14))
+                        .foregroundStyle(Color.paperTextSecondary)
+                    Text(gmtOffset)
+                        .font(.paperMono(12))
+                        .foregroundStyle(Color.paperTextSecondary.opacity(0.7))
+                }
             }
             Spacer()
             Text("\(day.photoCount) photos")
@@ -34,6 +48,6 @@ struct DayCard: View {
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Day \(day.dayIndex + 1), \(dateFormatter.string(from: day.date)), \(day.photoCount) photos")
+        .accessibilityLabel("Day \(day.dayIndex + 1), \(dateFormatter.string(from: day.date)), \(gmtOffset), \(day.photoCount) photos")
     }
 }

@@ -12,31 +12,46 @@ struct SharedAlbum: Identifiable, Sendable {
     let id: String
     let title: String
     let assetCount: Int
+    let isShared: Bool
 }
 
 @MainActor
 protocol SharedAlbumService: Sendable {
-    func fetchSharedAlbums() async -> [SharedAlbum]
+    func fetchAlbums() async -> [SharedAlbum]
     func fetchAlbum(id: String) async -> SharedAlbum?
     func fetchPhotos(albumIdentifier: String) async -> [PHAsset]
 }
 
 final class PhotoKitSharedAlbumService: SharedAlbumService {
-    func fetchSharedAlbums() async -> [SharedAlbum] {
-        let collections = PHAssetCollection.fetchAssetCollections(
-            with: .album,
-            subtype: .albumCloudShared,
-            options: nil
-        )
+    func fetchAlbums() async -> [SharedAlbum] {
         var albums: [SharedAlbum] = []
-        collections.enumerateObjects { collection, _, _ in
+
+        let shared = PHAssetCollection.fetchAssetCollections(
+            with: .album, subtype: .albumCloudShared, options: nil
+        )
+        shared.enumerateObjects { collection, _, _ in
             let count = collection.estimatedAssetCount
             albums.append(SharedAlbum(
                 id: collection.localIdentifier,
                 title: collection.localizedTitle ?? "Untitled",
-                assetCount: count == NSNotFound ? 0 : count
+                assetCount: count == NSNotFound ? 0 : count,
+                isShared: true
             ))
         }
+
+        let regular = PHAssetCollection.fetchAssetCollections(
+            with: .album, subtype: .albumRegular, options: nil
+        )
+        regular.enumerateObjects { collection, _, _ in
+            let count = collection.estimatedAssetCount
+            albums.append(SharedAlbum(
+                id: collection.localIdentifier,
+                title: collection.localizedTitle ?? "Untitled",
+                assetCount: count == NSNotFound ? 0 : count,
+                isShared: false
+            ))
+        }
+
         return albums
     }
 
@@ -60,10 +75,12 @@ final class PhotoKitSharedAlbumService: SharedAlbumService {
         )
         guard let collection = collections.firstObject else { return nil }
         let count = collection.estimatedAssetCount
+        let isShared = collection.assetCollectionSubtype == .albumCloudShared
         return SharedAlbum(
             id: collection.localIdentifier,
             title: collection.localizedTitle ?? "Untitled",
-            assetCount: count == NSNotFound ? 0 : count
+            assetCount: count == NSNotFound ? 0 : count,
+            isShared: isShared
         )
     }
 }

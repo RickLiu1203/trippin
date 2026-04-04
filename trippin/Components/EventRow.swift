@@ -11,10 +11,12 @@ struct EventRow: View {
     let event: TimelineEvent
     let assetIds: [String]
     let members: [TripMember]
+    var localTimezone: TimeZone = .current
 
     private var timeFormatter: DateFormatter {
         let f = DateFormatter()
         f.dateFormat = "h:mm a"
+        f.timeZone = localTimezone
         return f
     }
 
